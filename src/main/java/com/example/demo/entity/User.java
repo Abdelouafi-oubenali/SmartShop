@@ -14,6 +14,8 @@ public class User {
     private Long id  ;
     protected String username ;
     protected String password ;
+
+    @Enumerated(EnumType.STRING)
     protected Role role ;
 
 }

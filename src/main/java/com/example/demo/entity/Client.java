@@ -7,6 +7,7 @@ import lombok.Data;
 import java.util.List;
 @Data
 @Entity
+@Table(name = "orders")
 public class Client extends User {
 
     @Enumerated(EnumType.STRING)
