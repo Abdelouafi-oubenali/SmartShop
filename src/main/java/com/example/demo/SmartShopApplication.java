@@ -10,4 +10,5 @@ public class SmartShopApplication {
 		SpringApplication.run(SmartShopApplication.class, args);
 	}
 
+
 }
