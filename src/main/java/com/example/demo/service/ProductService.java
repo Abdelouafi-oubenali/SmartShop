@@ -9,8 +9,9 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 public interface ProductService {
     ProductDTO create(ProductDTO productDTO);
-//    ClientDTO update(Long id, ClientDTO clientDTO , UserDto userDto);
-//    ApiResponse delete(Long id);
-//    ClientDTO getById(Long id);
-//    List<ClientDTO> getAll();
+    List<ProductDTO> getAll();
+    ProductDTO update(Long id, ProductDTO productDTO);
+    ApiResponse delete(Long id);
+    ProductDTO getById(Long id);
+
 }
