@@ -4,16 +4,17 @@ import com.example.demo.dto.ClientDTO;
 import com.example.demo.dto.UserDto;
 import com.example.demo.entity.Client;
 import com.example.demo.entity.User;
+import com.example.demo.exception.ApiResponse;
 import com.example.demo.mapper.ClientMapper;
 import com.example.demo.mapper.UserMapper;
 import com.example.demo.repository.ClientRepository;
 import com.example.demo.repository.UserRepository;
 import com.example.demo.service.ClientService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class ClientServiceImpl implements ClientService {
@@ -65,7 +66,7 @@ public class ClientServiceImpl implements ClientService {
     public ClientDTO update(Long id , ClientDTO clientDTO , UserDto userDto)
     {
        Client client = clientRepository.findById(id)
-               .orElseThrow(() -> new RuntimeException("Client no fond")) ;
+               .orElseThrow(() -> new IllegalArgumentException("Client no fond")) ;
 
         User user = client.getUser();
 
@@ -90,16 +91,31 @@ public class ClientServiceImpl implements ClientService {
     }
 
     @Override
-    public void delete(Long id) {
-        Optional<Client> clientOptional = clientRepository.findById(id);
-        if(clientOptional.isPresent()) {
-            clientRepository.delete(clientOptional.get());
-        } else {
-            throw new RuntimeException("Client not found with id: " + id);
-        }
+    public ApiResponse delete(Long id) {
+
+        Client client = clientRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Le client avec l’ID : " + id + " n’existe pas"
+                ));
+
+        clientRepository.delete(client);
+
+        return new ApiResponse(
+                true,
+                "Le client avec l’ID " + id + " a été supprimé avec succès"
+        );
     }
 
+    @Override
+    public ClientDTO getById(Long id) {
 
+        Client client = clientRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND,
+                        "Client avec l'ID : " + id + " n'est pas trouvé"
+                ));
 
+        return clientMapper.toDTO(client);
+    }
 
 }

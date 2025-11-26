@@ -4,6 +4,7 @@ package com.example.demo.controller;
 import com.example.demo.dto.ClientDTO;
 import com.example.demo.dto.UserDto;
 import com.example.demo.entity.Client;
+import com.example.demo.exception.ApiResponse;
 import com.example.demo.service.ClientService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -79,14 +80,17 @@ public class ClientController {
 
     }
 
-    @DeleteMapping("{id}")
-    public void deleteClient(@PathVariable Long id)
+    @DeleteMapping("/{id}")
+    public ApiResponse deleteClient(@PathVariable Long id)
     {
-        clientService.delete(id);
+        return clientService.delete(id);
     }
 
-
-
+    @GetMapping("/{id}")
+    public ClientDTO getById(@PathVariable Long id)
+    {
+        return clientService.getById(id) ;
+    }
 
 
 }
