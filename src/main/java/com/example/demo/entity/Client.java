@@ -7,7 +7,14 @@ import lombok.Data;
 import java.util.List;
 @Data
 @Entity
-public class Client extends User {
+@Table(name = "clients")
+public class Client {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    private String name ;
+    private String email ;
 
     @Enumerated(EnumType.STRING)
     private LoyaltyLevel loyaltyLevel;
@@ -15,7 +22,12 @@ public class Client extends User {
     private Integer totalOrders ;
     private Double totalSpent ;
 
+    @OneToOne(cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "user_id", referencedColumnName = "id")
+    private User user ;
+
     @OneToMany(mappedBy = "client", cascade = CascadeType.ALL)
     private List<Order> orders;
 
 }
+
