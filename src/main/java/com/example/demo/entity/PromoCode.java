@@ -8,19 +8,19 @@ import lombok.Data;
 
 import java.util.Date;
 
-@Data
 @Entity
+@Data
 public class PromoCode {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id ;
 
     private String  code ;
-    private boolean deleted ;
+    private Boolean active ;
+    //private boolean deleted ;
     private Double discountPercentage ;
 
 
     private Date expirationDate ;
-    private Boolean active ;
 
 }
