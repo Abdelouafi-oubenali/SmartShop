@@ -15,8 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,7 +31,9 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository ;
 
     @Override
+    @Transactional
     public OrderDTO create(OrderDTO orderDTO) {
+
         Order order = new Order();
 
         if (orderDTO.getClientId() != null) {
@@ -41,42 +43,76 @@ public class OrderServiceImpl implements OrderService {
         }
 
         if (orderDTO.getPromoCodeId() != null) {
-            PromoCode promoCode = promoCodeRepository.findById(orderDTO.getPromoCodeId())
+            PromoCode promo = promoCodeRepository.findById(orderDTO.getPromoCodeId())
                     .orElseThrow(() -> new IllegalArgumentException("Promo code not found"));
-            order.setPromoCode(promoCode);
+            order.setPromoCode(promo);
         }
 
-        order.setOrderDate(orderDTO.getOrderDate());
-        order.setDiscount(orderDTO.getDiscount());
+        double sousTotalHT = 0;
+
+        for (OrderItemDTO dto : orderDTO.getItems()) {
+
+            if (dto.getProduitQuantite() <= 0) {
+                throw new IllegalArgumentException(
+                        "la quantity dommonde no trouve pas avec : productId = " + dto.getProductId()
+                );
+            }
+
+            Product product = productRepository.findById(dto.getProductId())
+                    .orElseThrow(() -> new IllegalArgumentException("Produit non trouvé"));
+
+            if (product.getAvailableStock() < dto.getProduitQuantite()) {
+                throw new IllegalArgumentException(
+                        "Stock insuffisant pour le produit : " + product.getName()
+                );
+            }
+
+            sousTotalHT += product.getUnitPrice() * dto.getProduitQuantite();
+        }
+
+        double remiseFidelite = calculateLoyaltyDiscount(orderDTO.getClientId(), sousTotalHT);
+        double remisePromo = calculatePromoDiscount(orderDTO.getPromoCodeId(), sousTotalHT);
+        double remiseTotale = remiseFidelite + remisePromo + (orderDTO.getDiscount() != null ? orderDTO.getDiscount() : 0);
+
+        double montantHTApresRemise = sousTotalHT - remiseTotale;
+
+        double tvaRate = orderDTO.getTax() / 100.0;
+        double tva = montantHTApresRemise * tvaRate;
+
+        double totalTTC = montantHTApresRemise + tva;
+
+        List<OrderItem> orderItems = new ArrayList<>();
+
+        for (OrderItemDTO dto : orderDTO.getItems()) {
+            Product product = productRepository.findById(dto.getProductId()).get();
+
+            product.setAvailableStock(product.getAvailableStock() - dto.getProduitQuantite());
+            productRepository.save(product);
+
+            OrderItem item = new OrderItem();
+            item.setOrder(order);
+            item.setProduct(product);
+            item.setProduitQuantite(dto.getProduitQuantite());
+            item.setTotalLigne(product.getUnitPrice() * dto.getProduitQuantite());
+
+            orderItems.add(item);
+        }
+
+        order.setItems(orderItems);
+        order.setTotal(totalTTC);
+        order.setDiscount(remiseTotale);
         order.setTax(orderDTO.getTax());
-        order.setTotal(orderDTO.getTotal());
+        order.setOrderDate(orderDTO.getOrderDate());
         order.setStatus(orderDTO.getStatus());
         order.setRemainingAmount(orderDTO.getRemainingAmount());
 
-        if (orderDTO.getItems() != null && !orderDTO.getItems().isEmpty()) {
-
-            //check stock
-            checkAndUpdateStock(orderDTO) ;
-
-            List<OrderItem> orderItems = orderDTO.getItems().stream()
-                    .map(dto -> {
-                        OrderItem item = new OrderItem();
-                        item.setProduitQuantite(dto.getProduitQuantite());
-                        item.setTotalLigne(dto.getTotalLigne());
-
-                        Product product = productRepository.findById(dto.getProductId()).get();
-                        item.setProduct(product);
-                        item.setOrder(order);
-
-                        return item;
-                    })
-                    .collect(Collectors.toList());
-
-            order.setItems(orderItems);
-        }
-
         Order savedOrder = orderRepository.save(order);
-        return orderMapper.toDTO(savedOrder);
+
+        OrderDTO resultDTO = orderMapper.toDTO(savedOrder);
+        resultDTO.setClientId(order.getClient() != null ? order.getClient().getId() : null);
+        resultDTO.setPromoCodeId(order.getPromoCode() != null ? order.getPromoCode().getId() : null);
+
+        return resultDTO;
     }
 
     @Override
@@ -108,22 +144,19 @@ public class OrderServiceImpl implements OrderService {
                 order.getItems().clear();
             }
 
-            List<OrderItem> orderItems = orderDTO.getItems().stream()
-                    .map(dto -> {
-                        OrderItem item = new OrderItem();
-                        item.setProduitQuantite(dto.getProduitQuantite());
-                        item.setTotalLigne(dto.getTotalLigne());
-
-                        if (dto.getProductId() != null) {
-//                             Product product = productRepository.findById(dto.getProductId())...
-//                             item.setProduct(product);
-                        }
-
-                        item.setOrder(order);
-                        return item;
-                    })
-                    .collect(Collectors.toList());
-
+            List<OrderItem> orderItems = new ArrayList<>();
+            for (OrderItemDTO dto : orderDTO.getItems()) {
+                OrderItem item = new OrderItem();
+                item.setProduitQuantite(dto.getProduitQuantite());
+                item.setTotalLigne(dto.getTotalLigne());
+                if (dto.getProductId() != null) {
+                    Product product = productRepository.findById(dto.getProductId())
+                            .orElse(null);
+                    item.setProduct(product);
+                }
+                item.setOrder(order);
+                orderItems.add(item);
+            }
             order.setItems(orderItems);
         }
 
@@ -149,27 +182,40 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public List<OrderDTO> getAll() {
         List<Order> orders = orderRepository.findAll();
-        return orders.stream()
-                .map(orderMapper::toDTO)
-                .collect(Collectors.toList());
+        List<OrderDTO> dtos = new ArrayList<>();
+        for (Order o : orders) {
+            OrderDTO dto = orderMapper.toDTO(o);
+            dto.setClientId(o.getClient() != null ? o.getClient().getId() : null);
+            dto.setPromoCodeId(o.getPromoCode() != null ? o.getPromoCode().getId() : null);
+            dtos.add(dto);
+        }
+        return dtos;
     }
 
-    private void checkAndUpdateStock(OrderDTO orderDTO)
-    {
-        for (OrderItemDTO dto : orderDTO.getItems()) {
-            Product product = productRepository.findById(dto.getProductId())
-                    .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+    private double calculateLoyaltyDiscount(Long clientId, double sousTotalHT) {
+        if (clientId == null) return 0;
 
-            if (product.getAvailableStock() < dto.getProduitQuantite()) {
+        Client client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new IllegalArgumentException("Client not found"));
 
-                throw new IllegalArgumentException(
-                        "la commonde regicted  Stock insuffisant pour le produit : " + product.getName()
-                );
-            }
-            product.setAvailableStock(product.getAvailableStock() - dto.getProduitQuantite());
-
-            productRepository.save(product) ;
+        switch (client.getLoyaltyLevel()) {
+            case SILVER: return sousTotalHT * 0.03;
+            case GOLD: return sousTotalHT * 0.05;
+            case PLATINUM: return sousTotalHT * 0.10;
+            default: return 0;
         }
+    }
+
+    private double calculatePromoDiscount(Long promoId, double sousTotalHT) {
+        if (promoId == null) return 0;
+
+        PromoCode promo = promoCodeRepository.findById(promoId)
+                .orElseThrow(() -> new IllegalArgumentException("Promo non trouvé"));
+
+        if (promo.getCode().startsWith("PROMO-") && promo.getActive()) {
+            return sousTotalHT * 0.05;
+        }
+        return 0;
     }
 
 }
