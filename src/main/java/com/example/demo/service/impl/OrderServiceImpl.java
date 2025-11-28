@@ -31,7 +31,6 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository ;
 
     @Override
-    @Transactional
     public OrderDTO create(OrderDTO orderDTO) {
         Order order = new Order();
 
@@ -55,19 +54,20 @@ public class OrderServiceImpl implements OrderService {
         order.setRemainingAmount(orderDTO.getRemainingAmount());
 
         if (orderDTO.getItems() != null && !orderDTO.getItems().isEmpty()) {
+
+            //check stock
+            checkAndUpdateStock(orderDTO) ;
+
             List<OrderItem> orderItems = orderDTO.getItems().stream()
                     .map(dto -> {
                         OrderItem item = new OrderItem();
                         item.setProduitQuantite(dto.getProduitQuantite());
                         item.setTotalLigne(dto.getTotalLigne());
 
-                        if (dto.getProductId() != null) {
-                            Product product = productRepository.findById(dto.getProductId())
-                                    .orElseThrow(() -> new IllegalArgumentException("Product not found dons ce dto"));
-                            item.setProduct(product);
-                        }
-
+                        Product product = productRepository.findById(dto.getProductId()).get();
+                        item.setProduct(product);
                         item.setOrder(order);
+
                         return item;
                     })
                     .collect(Collectors.toList());
@@ -80,7 +80,6 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    @Transactional
     public OrderDTO update(Long id, OrderDTO orderDTO) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Order not found"));
@@ -133,7 +132,6 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public OrderDTO getById(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Order not found"));
@@ -141,7 +139,6 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    @Transactional
     public ApiResponse delete(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Order not found"));
@@ -150,11 +147,29 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    @Transactional(readOnly = true)
     public List<OrderDTO> getAll() {
         List<Order> orders = orderRepository.findAll();
         return orders.stream()
                 .map(orderMapper::toDTO)
                 .collect(Collectors.toList());
     }
+
+    private void checkAndUpdateStock(OrderDTO orderDTO)
+    {
+        for (OrderItemDTO dto : orderDTO.getItems()) {
+            Product product = productRepository.findById(dto.getProductId())
+                    .orElseThrow(() -> new IllegalArgumentException("Product not found"));
+
+            if (product.getAvailableStock() < dto.getProduitQuantite()) {
+
+                throw new IllegalArgumentException(
+                        "la commonde regicted  Stock insuffisant pour le produit : " + product.getName()
+                );
+            }
+            product.setAvailableStock(product.getAvailableStock() - dto.getProduitQuantite());
+
+            productRepository.save(product) ;
+        }
+    }
+
 }
