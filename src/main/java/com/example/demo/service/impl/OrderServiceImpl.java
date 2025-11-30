@@ -1,5 +1,6 @@
 package com.example.demo.service.impl;
 
+import ch.qos.logback.core.status.Status;
 import com.example.demo.dto.OrderDTO;
 import com.example.demo.dto.OrderItemDTO;
 import com.example.demo.dto.PaiementDTO;
@@ -57,14 +58,14 @@ public class OrderServiceImpl implements OrderService {
         for (OrderItemDTO dto : orderDTO.getItems()) {
 
             if (dto.getProduitQuantite() <= 0) {
-                throw new IllegalArgumentException("Quantité non valide pour le produit.: " + dto.getProductId());
+                throw new IllegalArgumentException("Quantité non valide pour le produit: " + dto.getProductId());
             }
 
             Product product = productRepository.findById(dto.getProductId())
-                    .orElseThrow(() -> new IllegalArgumentException("Le produit n’existe pas."));
+                    .orElseThrow(() -> new IllegalArgumentException("Produit introuvable"));
 
             if (product.getAvailableStock() < dto.getProduitQuantite()) {
-                throw new IllegalArgumentException("Le stock est insuffisant pour le produit: " + product.getName());
+                throw new IllegalArgumentException("Stock insuffisant pour: " + product.getName());
             }
 
             sousTotalHT += product.getUnitPrice() * dto.getProduitQuantite();
@@ -72,12 +73,19 @@ public class OrderServiceImpl implements OrderService {
 
         double remiseFidelite = calculateLoyaltyDiscount(orderDTO.getClientId(), sousTotalHT);
         double remisePromo = calculatePromoDiscount(orderDTO.getPromoCodeId(), sousTotalHT);
-        double remiseTotale =
-                remiseFidelite +
-                        remisePromo +
-                        (orderDTO.getDiscount() != null ? orderDTO.getDiscount() : 0);
+
+        double remiseManuelle = 0;
+        if (orderDTO.getDiscount() != null) {
+            remiseManuelle = sousTotalHT * (orderDTO.getDiscount() / 100.0);
+        }
+
+        double remiseTotale = remiseFidelite + remisePromo + remiseManuelle;
 
         double montantHTApresRemise = sousTotalHT - remiseTotale;
+        if (montantHTApresRemise < 0) {
+            montantHTApresRemise = 0;
+        }
+
         double tvaRate = orderDTO.getTax() / 100.0;
         double tva = montantHTApresRemise * tvaRate;
         double totalTTC = montantHTApresRemise + tva;
@@ -105,7 +113,6 @@ public class OrderServiceImpl implements OrderService {
         order.setDiscount(remiseTotale);
         order.setTax(orderDTO.getTax());
         order.setOrderDate(orderDTO.getOrderDate());
-        order.setStatus(orderDTO.getStatus());
 
         List<Paiement> payments = new ArrayList<>();
 
@@ -135,13 +142,11 @@ public class OrderServiceImpl implements OrderService {
                 .sum();
 
         double remaining = totalTTC - totalPayments;
-
         order.setRemainingAmount(remaining);
 
-        if( remaining > 0)
-        {
+        if (remaining > 0) {
             order.setStatus(PENDING);
-        }else {
+        } else {
             order.setStatus(CONFIRMED);
         }
 
@@ -168,7 +173,7 @@ public class OrderServiceImpl implements OrderService {
         }
 
         order.setOrderDate(orderDTO.getOrderDate());
-        order.setDiscount(orderDTO.getDiscount());
+            order.setDiscount(orderDTO.getDiscount());
         order.setTax(orderDTO.getTax());
         order.setTotal(orderDTO.getTotal());
         order.setStatus(orderDTO.getStatus());
