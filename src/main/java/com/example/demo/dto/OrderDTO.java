@@ -20,5 +20,5 @@ public class OrderDTO {
     private Double remainingAmount;
     private List<OrderItemDTO> items;
 
-    //private List<PaiementDTO> payments;
+    private List<PaiementDTO> payments;
 }

@@ -2,6 +2,7 @@ package com.example.demo.service.impl;
 
 import com.example.demo.dto.OrderDTO;
 import com.example.demo.dto.OrderItemDTO;
+import com.example.demo.dto.PaiementDTO;
 import com.example.demo.entity.*;
 import com.example.demo.exception.ApiResponse;
 import com.example.demo.mapper.OrderItemMapper;
@@ -17,6 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static com.example.demo.enums.OrderStatus.CONFIRMED;
+import static com.example.demo.enums.OrderStatus.PENDING;
 
 @Service
 @RequiredArgsConstructor
@@ -53,18 +57,14 @@ public class OrderServiceImpl implements OrderService {
         for (OrderItemDTO dto : orderDTO.getItems()) {
 
             if (dto.getProduitQuantite() <= 0) {
-                throw new IllegalArgumentException(
-                        "la quantity dommonde no trouve pas avec : productId = " + dto.getProductId()
-                );
+                throw new IllegalArgumentException("Quantité non valide pour le produit.: " + dto.getProductId());
             }
 
             Product product = productRepository.findById(dto.getProductId())
-                    .orElseThrow(() -> new IllegalArgumentException("Produit non trouvé"));
+                    .orElseThrow(() -> new IllegalArgumentException("Le produit n’existe pas."));
 
             if (product.getAvailableStock() < dto.getProduitQuantite()) {
-                throw new IllegalArgumentException(
-                        "Stock insuffisant pour le produit : " + product.getName()
-                );
+                throw new IllegalArgumentException("Le stock est insuffisant pour le produit: " + product.getName());
             }
 
             sousTotalHT += product.getUnitPrice() * dto.getProduitQuantite();
@@ -72,18 +72,20 @@ public class OrderServiceImpl implements OrderService {
 
         double remiseFidelite = calculateLoyaltyDiscount(orderDTO.getClientId(), sousTotalHT);
         double remisePromo = calculatePromoDiscount(orderDTO.getPromoCodeId(), sousTotalHT);
-        double remiseTotale = remiseFidelite + remisePromo + (orderDTO.getDiscount() != null ? orderDTO.getDiscount() : 0);
+        double remiseTotale =
+                remiseFidelite +
+                        remisePromo +
+                        (orderDTO.getDiscount() != null ? orderDTO.getDiscount() : 0);
 
         double montantHTApresRemise = sousTotalHT - remiseTotale;
-
         double tvaRate = orderDTO.getTax() / 100.0;
         double tva = montantHTApresRemise * tvaRate;
-
         double totalTTC = montantHTApresRemise + tva;
 
         List<OrderItem> orderItems = new ArrayList<>();
 
         for (OrderItemDTO dto : orderDTO.getItems()) {
+
             Product product = productRepository.findById(dto.getProductId()).get();
 
             product.setAvailableStock(product.getAvailableStock() - dto.getProduitQuantite());
@@ -104,15 +106,48 @@ public class OrderServiceImpl implements OrderService {
         order.setTax(orderDTO.getTax());
         order.setOrderDate(orderDTO.getOrderDate());
         order.setStatus(orderDTO.getStatus());
-        order.setRemainingAmount(orderDTO.getRemainingAmount());
+
+        List<Paiement> payments = new ArrayList<>();
+
+        if (orderDTO.getPayments() != null) {
+            for (PaiementDTO dto : orderDTO.getPayments()) {
+
+                Paiement paiement = new Paiement();
+                paiement.setOrder(order);
+                paiement.setAmount(dto.getAmount());
+                paiement.setPaymentNumber(dto.getPaymentNumber());
+                paiement.setPaymentType(dto.getPaymentType());
+                paiement.setPaymentDate(dto.getPaymentDate());
+                paiement.setDepositDate(dto.getDepositDate());
+                paiement.setStatus(dto.getStatus());
+                paiement.setReference(dto.getReference());
+                paiement.setBank(dto.getBank());
+
+                payments.add(paiement);
+            }
+        }
+
+        order.setPayments(payments);
+
+        double totalPayments = payments.stream()
+                .filter(p -> p.getAmount() != null)
+                .mapToDouble(Paiement::getAmount)
+                .sum();
+
+        double remaining = totalTTC - totalPayments;
+
+        order.setRemainingAmount(remaining);
+
+        if( remaining > 0)
+        {
+            order.setStatus(PENDING);
+        }else {
+            order.setStatus(CONFIRMED);
+        }
 
         Order savedOrder = orderRepository.save(order);
 
-        OrderDTO resultDTO = orderMapper.toDTO(savedOrder);
-        resultDTO.setClientId(order.getClient() != null ? order.getClient().getId() : null);
-        resultDTO.setPromoCodeId(order.getPromoCode() != null ? order.getPromoCode().getId() : null);
-
-        return resultDTO;
+        return orderMapper.toDTO(savedOrder);
     }
 
     @Override
