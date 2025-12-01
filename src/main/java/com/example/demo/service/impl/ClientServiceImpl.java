@@ -77,7 +77,7 @@ public class ClientServiceImpl implements ClientService {
         client.setTotalSpent(clientDTO.getTotalSpent());
 
         user.setUsername(userDto.getUsername());
-        user.setPassword(userDto.getPassword());
+        //user.setPassword(userDto.getPassword());
         user.setRole(userDto.getRole());
 
         client = clientRepository.save(client);

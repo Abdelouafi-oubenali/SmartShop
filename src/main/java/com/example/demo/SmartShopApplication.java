@@ -9,4 +9,5 @@ public class SmartShopApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(SmartShopApplication.class, args);
 	}
+
 }

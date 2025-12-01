@@ -33,7 +33,7 @@ public class AuthController {
 
         HttpSession session = request.getSession();
         session.setAttribute("USER", userDto);
-
+        session.setAttribute("role", userDto.getRole());
         return ResponseEntity.ok(userDto);
     }
 
