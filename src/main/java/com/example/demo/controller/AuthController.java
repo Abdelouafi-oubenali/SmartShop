@@ -5,6 +5,7 @@ import com.example.demo.dto.UserDto;
 import com.example.demo.service.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +19,7 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(
+            @Valid
             @RequestBody LoginRequest loginRequest,
             HttpServletRequest request) {
 

@@ -39,6 +39,10 @@ public class ClientServiceImpl implements ClientService {
     @Override
     public ClientDTO create(ClientDTO clientDTO , UserDto userDto)
     {
+        if(clientRepository.existsByEmail(clientDTO.getEmail()))
+        {
+            throw new IllegalArgumentException("L'email existe déjà");
+        }
         User user = userMapper.toEntity(userDto) ;
         user = userRepository.save(user) ;
 
