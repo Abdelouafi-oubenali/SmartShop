@@ -3,6 +3,7 @@ package com.example.demo.controller;
 import com.example.demo.dto.LoginRequest;
 import com.example.demo.dto.UserDto;
 import com.example.demo.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -17,22 +18,25 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<?> login(
-            @RequestBody LoginRequest request,
-            HttpSession session) {
+            @RequestBody LoginRequest loginRequest,
+            HttpServletRequest request) {
 
         UserDto userDto = authService.login(
-                request.getUsername(),
-                request.getPassword()
+                loginRequest.getUsername(),
+                loginRequest.getPassword(),
+                request
         );
 
         if (userDto == null) {
             return ResponseEntity.status(401).body("Invalid username or password");
         }
 
+        HttpSession session = request.getSession();
         session.setAttribute("USER", userDto);
 
         return ResponseEntity.ok(userDto);
     }
+
 
 
     @GetMapping("/me")
@@ -48,9 +52,12 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<?> logout(HttpSession session) {
-        session.invalidate();
-        return ResponseEntity.ok("Logged out");
+    public ResponseEntity<?> logout(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
+        return ResponseEntity.ok("Logged out successfully");
     }
 }
 
