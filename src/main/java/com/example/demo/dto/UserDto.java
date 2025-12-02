@@ -13,5 +13,5 @@ public class UserDto {
 
     @NotNull(message = "Le rôle est obligatoire")
     private Role role;
-   // private String Password ;
+    private String password ;
 }

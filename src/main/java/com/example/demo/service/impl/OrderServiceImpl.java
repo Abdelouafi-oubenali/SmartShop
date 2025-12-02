@@ -253,13 +253,20 @@ public class OrderServiceImpl implements OrderService {
         Client client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new IllegalArgumentException("Client not found"));
 
-        switch (client.getLoyaltyLevel()) {
-            case SILVER: return sousTotalHT * 0.03;
-            case GOLD: return sousTotalHT * 0.05;
-            case PLATINUM: return sousTotalHT * 0.10;
-            default: return 0;
+        double discount = 0;
+
+        if (client.getLoyaltyLevel() == LoyaltyLevel.SILVER && sousTotalHT >= 500) {
+            discount = sousTotalHT * 0.05;
+        } else if (client.getLoyaltyLevel() == LoyaltyLevel.GOLD && sousTotalHT >= 800) {
+            discount = sousTotalHT * 0.10;
+        } else if (client.getLoyaltyLevel() == LoyaltyLevel.PLATINUM && sousTotalHT >= 1200) {
+            discount = sousTotalHT * 0.15;
         }
+
+        return discount;
     }
+
+
 
     private double calculatePromoDiscount(Long promoId, double sousTotalHT) {
         if (promoId == null) return 0;

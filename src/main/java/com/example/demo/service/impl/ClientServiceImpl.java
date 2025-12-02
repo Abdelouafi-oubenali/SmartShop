@@ -43,6 +43,7 @@ public class ClientServiceImpl implements ClientService {
         {
             throw new IllegalArgumentException("L'email existe déjà");
         }
+        System.out.println(userDto) ;
         User user = userMapper.toEntity(userDto) ;
         user = userRepository.save(user) ;
 
