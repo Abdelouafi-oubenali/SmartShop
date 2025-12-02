@@ -6,6 +6,7 @@ import com.example.demo.exception.ApiResponse;
 import com.example.demo.service.HelperService;
 import com.example.demo.service.OrderService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,7 +23,7 @@ public class OrderController {
     private final HelperService helperService ;
 
     @PostMapping
-    public ResponseEntity<?> createOrder(@RequestBody OrderDTO orderDTO , HttpServletRequest httpRequest) {
+    public ResponseEntity<?> createOrder(@Valid @RequestBody OrderDTO orderDTO , HttpServletRequest httpRequest) {
 
         if(!helperService.isAuthenticated(httpRequest)) {
             return ResponseEntity.status(401).body("tu ne pas login");
@@ -37,7 +38,7 @@ public class OrderController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateOrder(@PathVariable Long id, @RequestBody OrderDTO orderDTO , HttpServletRequest httpRequest) {
+    public ResponseEntity<?> updateOrder(@Valid @PathVariable Long id, @RequestBody OrderDTO orderDTO , HttpServletRequest httpRequest) {
 
         if(!helperService.isAuthenticated(httpRequest)) {
             return ResponseEntity.status(401).body("tu ne pas login");

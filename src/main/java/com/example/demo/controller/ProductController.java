@@ -4,6 +4,7 @@ import com.example.demo.dto.ProductDTO;
 import com.example.demo.entity.Product;
 import com.example.demo.exception.ApiResponse;
 import com.example.demo.service.ProductService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,7 +18,7 @@ public class ProductController {
     private final ProductService productService;
 
     @PostMapping
-    public ProductDTO CreateProduct(@RequestBody ProductDTO request)
+    public ProductDTO CreateProduct(@Valid @RequestBody ProductDTO request)
     {
         return productService.create(request) ;
     }
@@ -36,7 +37,7 @@ public class ProductController {
     }
 
     @PutMapping("/{id}")
-    public ProductDTO updateProduct(@PathVariable Long id , @RequestBody ProductDTO productDTO)
+    public ProductDTO updateProduct(@Valid @PathVariable Long id , @RequestBody ProductDTO productDTO)
     {
         return productService.update(id, productDTO) ;
     }
