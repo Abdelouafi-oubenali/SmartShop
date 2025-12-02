@@ -5,6 +5,7 @@ import com.example.demo.dto.OrderDTO;
 import com.example.demo.dto.OrderItemDTO;
 import com.example.demo.dto.PaiementDTO;
 import com.example.demo.entity.*;
+import com.example.demo.enums.LoyaltyLevel;
 import com.example.demo.enums.OrderStatus;
 import com.example.demo.exception.ApiResponse;
 import com.example.demo.mapper.OrderItemMapper;
@@ -150,8 +151,22 @@ public class OrderServiceImpl implements OrderService {
             order.setStatus(CONFIRMED);
         }
 
+
+
         Order savedOrder = orderRepository.save(order);
 
+        if (order.getClient() != null) {
+
+            LoyaltyLevel newLevel = checkLoyaltyLevel(
+                    order.getClient().getId(),
+                    CONFIRMED
+            );
+
+            Client client = order.getClient();
+            client.setLoyaltyLevel(newLevel);
+
+            clientRepository.save(client);
+        }
         return orderMapper.toDTO(savedOrder);
     }
 
@@ -283,6 +298,29 @@ public class OrderServiceImpl implements OrderService {
 
         return stats;
     }
+
+    private LoyaltyLevel checkLoyaltyLevel(Long clientId, OrderStatus orderStatus) {
+
+        Long count = orderRepository.countByClientIdAndStatus(clientId, orderStatus);
+        Double totalCumule = orderRepository.sumTotalByClientAndStatus(clientId, orderStatus);
+
+        if (totalCumule == null) totalCumule = 0.0;
+
+        if (count >= 20 || totalCumule >= 15000) {
+            return LoyaltyLevel.PLATINUM;
+        }
+
+        if (count >= 10 || totalCumule >= 5000) {
+            return LoyaltyLevel.GOLD;
+        }
+
+        if (count >= 3 || totalCumule >= 1000) {
+            return LoyaltyLevel.SILVER;
+        }
+
+        return LoyaltyLevel.BASIC;
+    }
+
 
 
 }
