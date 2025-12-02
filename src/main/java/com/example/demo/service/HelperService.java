@@ -7,4 +7,5 @@ public interface HelperService {
     boolean isAuthenticated (HttpServletRequest request) ;
 
     boolean hasRole(HttpServletRequest request, Role requiredRole);
-}
+    public Long getLoggedUserId(HttpServletRequest request) ;
+    }

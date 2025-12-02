@@ -97,4 +97,19 @@ public class OrderController {
         List<OrderDTO> orders = orderService.getAll();
         return ResponseEntity.ok(orders);
     }
+
+    @GetMapping("/stats/my-confirmed-orders")
+    public ResponseEntity<?> getMyOrdersStats(HttpServletRequest httpRequest) {
+
+        if (!helperService.isAuthenticated(httpRequest)) {
+            return ResponseEntity.status(401).body("Tu n'es pas connecté");
+        }
+
+        Long userId = helperService.getLoggedUserId(httpRequest);
+        System.out.println("user id dons controoler tet : " + userId) ;
+
+        return ResponseEntity.ok(orderService.getConfirmedOrdersStatsForLoggedUser(userId));
+    }
+
+
 }

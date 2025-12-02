@@ -5,6 +5,8 @@ import com.example.demo.dto.OrderItemDTO;
 import com.example.demo.exception.ApiResponse;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 
 public interface OrderService {
@@ -14,5 +16,5 @@ public interface OrderService {
     ApiResponse delete(Long id);
     OrderDTO getById(Long id);
     List<OrderDTO> getAll();
-
+    Map<String , Object> getConfirmedOrdersStatsForLoggedUser(Long id) ;
 }

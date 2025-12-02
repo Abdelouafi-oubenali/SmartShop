@@ -1,5 +1,6 @@
 package com.example.demo.service.impl;
 
+import com.example.demo.dto.UserDto;
 import com.example.demo.enums.Role;
 import com.example.demo.service.HelperService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -26,5 +27,18 @@ public class HelperServiceImpl  implements HelperService {
 
         return userRole == requiredRole;
     }
+
+    @Override
+    public Long getLoggedUserId(HttpServletRequest request) {
+        HttpSession session = request.getSession(false);
+        if (session == null) return null;
+
+        Object userObj = session.getAttribute("USER");
+        if (userObj == null) return null;
+
+        UserDto userDto = (UserDto) userObj;
+        return userDto.getId();
+    }
+
 
 }

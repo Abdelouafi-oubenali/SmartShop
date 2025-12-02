@@ -5,6 +5,7 @@ import com.example.demo.dto.OrderDTO;
 import com.example.demo.dto.OrderItemDTO;
 import com.example.demo.dto.PaiementDTO;
 import com.example.demo.entity.*;
+import com.example.demo.enums.OrderStatus;
 import com.example.demo.exception.ApiResponse;
 import com.example.demo.mapper.OrderItemMapper;
 import com.example.demo.mapper.OrderMapper;
@@ -17,8 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 import static com.example.demo.enums.OrderStatus.CONFIRMED;
 import static com.example.demo.enums.OrderStatus.PENDING;
@@ -257,5 +257,32 @@ public class OrderServiceImpl implements OrderService {
         }
         return 0;
     }
+
+    @Override
+    public Map<String, Object> getConfirmedOrdersStatsForLoggedUser(Long userId) {
+
+        System.out.println("---------------  user id et " + userId) ;
+
+        Client client = clientRepository.findByUser_Id(userId)
+                .orElseThrow(() -> new RuntimeException("Client introuvable pour cet utilisateur"));
+
+        Optional<Client> clientOpt = clientRepository.findByUser_Id(1L);
+        System.out.println("Client found: " + clientOpt.isPresent());
+
+        Long clientId = client.getId();
+
+        Long totalOrders = orderRepository.countByClientIdAndStatus(clientId, OrderStatus.CONFIRMED);
+
+        Double totalAmount = orderRepository.sumTotalByClientAndStatus(clientId, OrderStatus.CONFIRMED);
+        if (totalAmount == null) totalAmount = 0.0;
+
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("clientId", clientId);
+        stats.put("totalOrders", totalOrders);
+        stats.put("totalAmount", totalAmount);
+
+        return stats;
+    }
+
 
 }

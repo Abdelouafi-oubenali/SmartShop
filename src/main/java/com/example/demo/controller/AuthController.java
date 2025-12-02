@@ -36,6 +36,11 @@ public class AuthController {
         HttpSession session = request.getSession();
         session.setAttribute("USER", userDto);
         session.setAttribute("role", userDto.getRole());
+
+        System.out.println("User ID: " + userDto.getId());
+        System.out.println("Username: " + userDto.getUsername());
+        System.out.println("Role: " + userDto.getRole());
+
         return ResponseEntity.ok(userDto);
     }
 
