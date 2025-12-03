@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.OrderDTO;
+import com.example.demo.enums.OrderStatus;
 import com.example.demo.enums.Role;
 import com.example.demo.exception.ApiResponse;
 import com.example.demo.service.HelperService;
@@ -37,20 +38,13 @@ public class OrderController {
         return ResponseEntity.ok(createdOrder);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<?> updateOrder(@Valid @PathVariable Long id, @RequestBody OrderDTO orderDTO , HttpServletRequest httpRequest) {
+    @PutMapping("/{id}/status")
+    public ResponseEntity<OrderDTO> updateStatus(
+            @PathVariable Long id,
+            @RequestParam OrderStatus status) {
 
-        if(!helperService.isAuthenticated(httpRequest)) {
-            return ResponseEntity.status(401).body("tu ne pas login");
-        }
-
-        if (!helperService.hasRole(httpRequest, Role.ADMIN)) {
-            return ResponseEntity.status(403).body("vous n'avez pas la permission pour faire cette action : ADMIN only");
-        }
-
-
-        OrderDTO updatedOrder = orderService.update(id, orderDTO);
-        return ResponseEntity.ok(updatedOrder);
+        OrderDTO orderDTO = orderService.updateStatus(id, status);
+        return ResponseEntity.ok(orderDTO);
     }
 
     @GetMapping("/{id}")
@@ -110,6 +104,7 @@ public class OrderController {
 
         return ResponseEntity.ok(orderService.getConfirmedOrdersStatsForLoggedUser(userId));
     }
+
 
 
 }
