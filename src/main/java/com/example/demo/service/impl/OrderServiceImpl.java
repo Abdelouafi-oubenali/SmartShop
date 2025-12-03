@@ -10,10 +10,7 @@ import com.example.demo.enums.OrderStatus;
 import com.example.demo.exception.ApiResponse;
 import com.example.demo.mapper.OrderItemMapper;
 import com.example.demo.mapper.OrderMapper;
-import com.example.demo.repository.ClientRepository;
-import com.example.demo.repository.OrderRepository;
-import com.example.demo.repository.ProductRepository;
-import com.example.demo.repository.PromoCodeRepository;
+import com.example.demo.repository.*;
 import com.example.demo.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -35,6 +32,8 @@ public class OrderServiceImpl implements OrderService {
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
     private final ProductRepository productRepository ;
+    private final OrderItemRepository orderItemRepository ;
+
 
     @Override
     @Transactional
@@ -171,52 +170,31 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
-    public OrderDTO update(Long id, OrderDTO orderDTO) {
+    public OrderDTO updateStatus(Long id, OrderStatus orderStatus) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Order not found"));
 
-        if (orderDTO.getClientId() != null) {
-            Client client = clientRepository.findById(orderDTO.getClientId())
-                    .orElseThrow(() -> new IllegalArgumentException("Client not found"));
-            order.setClient(client);
+        order.setStatus(orderStatus);
+        orderRepository.save(order) ;
+
+        List<OrderItem> list_items = orderItemRepository.findByOrderId(order.getId()) ;
+
+        for (OrderItem item : list_items) {
+            Long productId = item.getProduct().getId();
+            Integer quantity = item.getProduitQuantite();
+
+            Product product = productRepository.findById(productId)
+                    .orElseThrow(() -> new IllegalArgumentException("Produit introuvable"));
+
+            product.setAvailableStock(product.getAvailableStock() + quantity);
+            productRepository.save(product);
+
+            System.out.println("Product ID: " + productId);
+            System.out.println("Quantity: " + quantity);
         }
 
-        if (orderDTO.getPromoCodeId() != null) {
-            PromoCode promoCode = promoCodeRepository.findById(orderDTO.getPromoCodeId())
-                    .orElseThrow(() -> new IllegalArgumentException("Promo code not found"));
-            order.setPromoCode(promoCode);
-        }
 
-        order.setOrderDate(orderDTO.getOrderDate());
-            order.setDiscount(orderDTO.getDiscount());
-        order.setTax(orderDTO.getTax());
-        order.setTotal(orderDTO.getTotal());
-        order.setStatus(orderDTO.getStatus());
-        order.setRemainingAmount(orderDTO.getRemainingAmount());
-
-        if (orderDTO.getItems() != null) {
-            if (order.getItems() != null) {
-                order.getItems().clear();
-            }
-
-            List<OrderItem> orderItems = new ArrayList<>();
-            for (OrderItemDTO dto : orderDTO.getItems()) {
-                OrderItem item = new OrderItem();
-                item.setProduitQuantite(dto.getProduitQuantite());
-                item.setTotalLigne(dto.getTotalLigne());
-                if (dto.getProductId() != null) {
-                    Product product = productRepository.findById(dto.getProductId())
-                            .orElse(null);
-                    item.setProduct(product);
-                }
-                item.setOrder(order);
-                orderItems.add(item);
-            }
-            order.setItems(orderItems);
-        }
-
-        Order updatedOrder = orderRepository.save(order);
-        return orderMapper.toDTO(updatedOrder);
+        return orderMapper.toDTO(order) ;
     }
 
     @Override
