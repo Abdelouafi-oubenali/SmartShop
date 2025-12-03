@@ -1,0 +1,17 @@
+package com.example.demo.service;
+
+import com.example.demo.dto.ClientDTO;
+import com.example.demo.dto.ProductDTO;
+import com.example.demo.dto.UserDto;
+import com.example.demo.exception.ApiResponse;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+public interface ProductService {
+    ProductDTO create(ProductDTO productDTO);
+    List<ProductDTO> getAll();
+    ProductDTO update(Long id, ProductDTO productDTO);
+    ApiResponse delete(Long id);
+    ProductDTO getById(Long id);
+
+}
