@@ -10,6 +10,7 @@ import com.example.demo.enums.OrderStatus;
 import com.example.demo.exception.ApiResponse;
 import com.example.demo.mapper.OrderItemMapper;
 import com.example.demo.mapper.OrderMapper;
+import com.example.demo.mapper.PaiementMapper;
 import com.example.demo.repository.*;
 import com.example.demo.service.OrderService;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +34,8 @@ public class OrderServiceImpl implements OrderService {
     private final OrderItemMapper orderItemMapper;
     private final ProductRepository productRepository ;
     private final OrderItemRepository orderItemRepository ;
-
+    private final PaiementRepository paiementRepository ;
+    private final PaiementMapper paiementMapper ;
 
     @Override
     @Transactional
@@ -224,6 +226,42 @@ public class OrderServiceImpl implements OrderService {
         }
         return dtos;
     }
+
+    @Override
+    public ApiResponse completePayment(Long orderId, PaiementDTO paiementDTO) {
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Aucune commande trouvée avec cet identifiant."));
+
+        Double rest = order.getRemainingAmount() - paiementDTO.getAmount();
+
+        System.out.println();
+        if (rest > 0) {
+
+            order.setRemainingAmount(rest);
+            orderRepository.save(order);
+
+            return new ApiResponse(true,"Un paiement partiel a été enregistré. Le montant restant à payer est : " + rest
+            );
+        }
+
+        else if (rest < 0) {
+
+            return new ApiResponse(false,"Montant incorrect : le montant payé dépasse le montant restant. Veuillez saisir le montant exact."
+            );
+        }
+
+        else {
+
+            order.setStatus(CONFIRMED);
+            order.setRemainingAmount(0.0);
+            orderRepository.save(order);
+
+            return new ApiResponse(true,"Le paiement complet a été effectué. La commande est maintenant confirmée."
+            );
+        }
+    }
+
 
     private double calculateLoyaltyDiscount(Long clientId, double sousTotalHT) {
         if (clientId == null) return 0;

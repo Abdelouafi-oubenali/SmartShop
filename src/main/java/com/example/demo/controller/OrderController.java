@@ -1,11 +1,14 @@
 package com.example.demo.controller;
 
 import com.example.demo.dto.OrderDTO;
+import com.example.demo.dto.PaiementDTO;
+import com.example.demo.entity.Paiement;
 import com.example.demo.enums.OrderStatus;
 import com.example.demo.enums.Role;
 import com.example.demo.exception.ApiResponse;
 import com.example.demo.service.HelperService;
 import com.example.demo.service.OrderService;
+import jakarta.persistence.Id;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +25,7 @@ public class OrderController {
 
     private final OrderService orderService;
     private final HelperService helperService ;
+
 
     @PostMapping
     public ResponseEntity<?> createOrder(@Valid @RequestBody OrderDTO orderDTO , HttpServletRequest httpRequest) {
@@ -104,6 +108,14 @@ public class OrderController {
 
         return ResponseEntity.ok(orderService.getConfirmedOrdersStatsForLoggedUser(userId));
     }
+
+    @PostMapping("/completePayment/{id}")
+    public ApiResponse completePayment(@PathVariable("id") Long id, @RequestBody PaiementDTO paiementDTO)
+    {
+          return orderService.completePayment(id , paiementDTO) ;
+
+    }
+
 
 
 
